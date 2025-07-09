@@ -1,0 +1,14 @@
+
+# Tor configuration for SOCKS proxy
+SocksPort 127.0.0.1:9050
+SocksPolicy accept 127.0.0.1
+SocksPolicy reject *
+
+# Control port (optional, for debugging)
+ControlPort 9051
+
+# Data directory
+DataDirectory /tmp/tor
+
+# Log settings
+Log notice stdout

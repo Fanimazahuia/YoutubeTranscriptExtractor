@@ -48,7 +48,11 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "sudo service tor start"
+args = "mkdir -p /tmp/tor"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "tor -f torrc"
 
 [[ports]]
 localPort = 5000
