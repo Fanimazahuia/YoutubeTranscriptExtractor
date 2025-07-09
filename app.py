@@ -50,15 +50,20 @@ def get_transcript():
 
         app.logger.debug(f"Fetching transcript for video ID: {video_id}")
 
-        # Configure Tor SOCKS5 proxy settings
-        proxies = {
-            'http': 'socks5h://127.0.0.1:9050',
-            'https': 'socks5h://127.0.0.1:9050'
-        }
-        app.logger.debug("Using Tor SOCKS5 proxy: 127.0.0.1:9050")
+        # Try to use Tor SOCKS5 proxy, fallback to direct connection if unavailable
+        try:
+            proxies = {
+                'http': 'socks5h://127.0.0.1:9050',
+                'https': 'socks5h://127.0.0.1:9050'
+            }
+            app.logger.debug("Attempting to use Tor SOCKS5 proxy: 127.0.0.1:9050")
 
-        # Fetch transcript using youtube-transcript-api
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+            # Test proxy connection by attempting to fetch transcript
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+        except Exception as proxy_error:
+            app.logger.warning(f"Tor proxy failed, falling back to direct connection: {str(proxy_error)}")
+            # Fallback to direct connection without proxy
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
 
         # Format transcript data to match expected output
         formatted_transcript = []
@@ -136,15 +141,20 @@ def get_formatted_transcript():
 
         app.logger.debug(f"Fetching formatted transcript for video ID: {video_id}")
 
-        # Configure Tor SOCKS5 proxy settings
-        proxies = {
-            'http': 'socks5h://127.0.0.1:9050',
-            'https': 'socks5h://127.0.0.1:9050'
-        }
-        app.logger.debug("Using Tor SOCKS5 proxy: 127.0.0.1:9050")
+        # Try to use Tor SOCKS5 proxy, fallback to direct connection if unavailable
+        try:
+            proxies = {
+                'http': 'socks5h://127.0.0.1:9050',
+                'https': 'socks5h://127.0.0.1:9050'
+            }
+            app.logger.debug("Attempting to use Tor SOCKS5 proxy: 127.0.0.1:9050")
 
-        # Fetch transcript using youtube-transcript-api
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+            # Test proxy connection by attempting to fetch transcript
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+        except Exception as proxy_error:
+            app.logger.warning(f"Tor proxy failed, falling back to direct connection: {str(proxy_error)}")
+            # Fallback to direct connection without proxy
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
 
         # Format transcript as text with timestamps
         formatted_text = ""
