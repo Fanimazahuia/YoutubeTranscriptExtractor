@@ -19,13 +19,13 @@ CORS(app)
 def get_transcript():
     """
     Fetch YouTube video transcript by video ID.
-    
+
     Query Parameters:
         videoId (str): YouTube video ID (required)
-    
+
     Returns:
         JSON: Array of transcript objects with start, duration, and text fields
-        
+
     Error Responses:
         400: Missing or invalid videoId parameter
         404: Transcript not found or video unavailable
@@ -34,25 +34,32 @@ def get_transcript():
     try:
         # Get videoId from query parameters
         video_id = request.args.get('videoId')
-        
+
         if not video_id:
             return jsonify({
                 'error': 'Missing required parameter: videoId',
                 'message': 'Please provide a YouTube video ID in the videoId query parameter'
             }), 400
-        
+
         # Validate videoId format (basic check)
         if not video_id.strip():
             return jsonify({
                 'error': 'Invalid videoId parameter',
                 'message': 'videoId cannot be empty'
             }), 400
-        
+
         app.logger.debug(f"Fetching transcript for video ID: {video_id}")
-        
+
+        # Configure Tor SOCKS5 proxy settings
+        proxies = {
+            'http': 'socks5h://127.0.0.1:9050',
+            'https': 'socks5h://127.0.0.1:9050'
+        }
+        app.logger.debug("Using Tor SOCKS5 proxy: 127.0.0.1:9050")
+
         # Fetch transcript using youtube-transcript-api
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-        
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+
         # Format transcript data to match expected output
         formatted_transcript = []
         for entry in transcript_list:
@@ -61,32 +68,32 @@ def get_transcript():
                 'duration': entry.get('duration', 0),
                 'text': entry.get('text', '')
             })
-        
+
         app.logger.debug(f"Successfully retrieved transcript with {len(formatted_transcript)} entries")
-        
+
         return jsonify(formatted_transcript), 200
-        
+
     except TranscriptsDisabled:
         app.logger.warning(f"Transcripts disabled for video ID: {video_id}")
         return jsonify({
             'error': 'Transcripts disabled',
             'message': 'Transcripts are disabled for this video'
         }), 404
-        
+
     except NoTranscriptFound:
         app.logger.warning(f"No transcript found for video ID: {video_id}")
         return jsonify({
             'error': 'No transcript found',
             'message': 'No transcript is available for this video'
         }), 404
-        
+
     except VideoUnavailable:
         app.logger.warning(f"Video unavailable for video ID: {video_id}")
         return jsonify({
             'error': 'Video unavailable',
             'message': 'The requested video is unavailable or does not exist'
         }), 404
-        
+
     except Exception as e:
         app.logger.error(f"Unexpected error fetching transcript for video ID {video_id}: {str(e)}")
         return jsonify({
@@ -98,13 +105,13 @@ def get_transcript():
 def get_formatted_transcript():
     """
     Fetch YouTube video transcript by video ID and return as formatted text.
-    
+
     Query Parameters:
         videoId (str): YouTube video ID (required)
-    
+
     Returns:
         Text: Formatted transcript with timestamps in MM:SS format
-        
+
     Error Responses:
         400: Missing or invalid videoId parameter
         404: Transcript not found or video unavailable
@@ -113,64 +120,71 @@ def get_formatted_transcript():
     try:
         # Get videoId from query parameters
         video_id = request.args.get('videoId')
-        
+
         if not video_id:
             return jsonify({
                 'error': 'Missing required parameter: videoId',
                 'message': 'Please provide a YouTube video ID in the videoId query parameter'
             }), 400
-        
+
         # Validate videoId format (basic check)
         if not video_id.strip():
             return jsonify({
                 'error': 'Invalid videoId parameter',
                 'message': 'videoId cannot be empty'
             }), 400
-        
+
         app.logger.debug(f"Fetching formatted transcript for video ID: {video_id}")
-        
+
+        # Configure Tor SOCKS5 proxy settings
+        proxies = {
+            'http': 'socks5h://127.0.0.1:9050',
+            'https': 'socks5h://127.0.0.1:9050'
+        }
+        app.logger.debug("Using Tor SOCKS5 proxy: 127.0.0.1:9050")
+
         # Fetch transcript using youtube-transcript-api
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-        
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+
         # Format transcript as text with timestamps
         formatted_text = ""
         for entry in transcript_list:
             start_time = entry.get('start', 0)
             text = entry.get('text', '')
-            
+
             # Convert seconds to MM:SS format
             minutes = int(start_time // 60)
             seconds = int(start_time % 60)
             timestamp = f"{minutes}:{seconds:02d}"
-            
+
             formatted_text += f"{timestamp}\n{text}\n"
-        
+
         app.logger.debug(f"Successfully formatted transcript with {len(transcript_list)} entries")
-        
+
         # Return as plain text
         return formatted_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-        
+
     except TranscriptsDisabled:
         app.logger.warning(f"Transcripts disabled for video ID: {video_id}")
         return jsonify({
             'error': 'Transcripts disabled',
             'message': 'Transcripts are disabled for this video'
         }), 404
-        
+
     except NoTranscriptFound:
         app.logger.warning(f"No transcript found for video ID: {video_id}")
         return jsonify({
             'error': 'No transcript found',
             'message': 'No transcript is available for this video'
         }), 404
-        
+
     except VideoUnavailable:
         app.logger.warning(f"Video unavailable for video ID: {video_id}")
         return jsonify({
             'error': 'Video unavailable',
             'message': 'The requested video is unavailable or does not exist'
         }), 404
-        
+
     except Exception as e:
         app.logger.error(f"Unexpected error fetching formatted transcript for video ID {video_id}: {str(e)}")
         return jsonify({
@@ -182,7 +196,7 @@ def get_formatted_transcript():
 def health_check():
     """
     Simple health check endpoint to verify the API is running.
-    
+
     Returns:
         JSON: Status message
     """
@@ -195,7 +209,7 @@ def health_check():
 def root():
     """
     Root endpoint providing API documentation.
-    
+
     Returns:
         JSON: API documentation and usage instructions
     """

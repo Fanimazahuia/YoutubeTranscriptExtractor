@@ -41,6 +41,15 @@ author = "agent"
 task = "shell.exec"
 args = "uv add youtube-transcript-api flask-cors"
 
+[[workflows.workflow]]
+name = "Start Tor"
+author = 44139815
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sudo service tor start"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
