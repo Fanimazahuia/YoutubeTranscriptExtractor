@@ -1,0 +1,88 @@
+Cloning from https://github.com/Fanimazahuia/YoutubeTranscriptExtractor
+==> Checking out commit a6076e99560c54e33020c0097adece73170171c0 in branch main
+==> Downloading cache...
+==> Transferred 109MB in 8s. Extraction took 0s.
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.99kB done
+#1 DONE 0.0s
+#2 [internal] load metadata for docker.io/library/python:3.11-slim
+#2 ...
+#3 [auth] library/python:pull render-prod/docker-mirror-repository/library/python:pull token for us-west1-docker.pkg.dev
+#3 DONE 0.0s
+#2 [internal] load metadata for docker.io/library/python:3.11-slim
+#2 DONE 4.6s
+#4 [internal] load .dockerignore
+#4 transferring context: 432B done
+#4 DONE 0.0s
+#5 importing cache manifest from local:18238357051550539993
+#5 inferred cache manifest type: application/vnd.oci.image.index.v1+json done
+#5 DONE 0.0s
+#6 [1/9] FROM docker.io/library/python:3.11-slim@sha256:1d6131b5d479888b43200645e03a78443c7157efbdb730e6b48129740727c312
+#6 resolve docker.io/library/python:3.11-slim@sha256:1d6131b5d479888b43200645e03a78443c7157efbdb730e6b48129740727c312 done
+#6 DONE 0.0s
+#7 [internal] load build context
+#7 transferring context: 94.63kB done
+#7 DONE 0.0s
+#8 [2/9] RUN apt-get update && apt-get install -y     tor     curl     && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+#9 [3/9] WORKDIR /app
+#9 sha256:396b1da7636e2dcd10565cb4f2f952cbb4a8a38b58d3b86a2cacb172fb70117c 29.77MB / 29.77MB 0.2s done
+#9 extracting sha256:396b1da7636e2dcd10565cb4f2f952cbb4a8a38b58d3b86a2cacb172fb70117c
+#9 extracting sha256:396b1da7636e2dcd10565cb4f2f952cbb4a8a38b58d3b86a2cacb172fb70117c 0.8s done
+#9 sha256:fcec5a125fd8f69ba9d5c3fd9ecf3810f95775d4d5694ed731adcdeae1cff909 1.29MB / 1.29MB 0.0s done
+#9 extracting sha256:fcec5a125fd8f69ba9d5c3fd9ecf3810f95775d4d5694ed731adcdeae1cff909
+#9 extracting sha256:fcec5a125fd8f69ba9d5c3fd9ecf3810f95775d4d5694ed731adcdeae1cff909 1.4s done
+#9 sha256:a27cb4be70170df84ec3045fb7d33b3eb7018cb39fc029037429d9f06362737f 14.64MB / 14.64MB 0.2s done
+#9 extracting sha256:a27cb4be70170df84ec3045fb7d33b3eb7018cb39fc029037429d9f06362737f
+#9 extracting sha256:a27cb4be70170df84ec3045fb7d33b3eb7018cb39fc029037429d9f06362737f 3.4s done
+#9 sha256:1961ca026b04e3e3720545ee5a8e05e60692056663c685c5d2437bf3ad9e6e08 249B / 249B done
+#9 extracting sha256:1961ca026b04e3e3720545ee5a8e05e60692056663c685c5d2437bf3ad9e6e08
+#9 extracting sha256:1961ca026b04e3e3720545ee5a8e05e60692056663c685c5d2437bf3ad9e6e08 0.7s done
+#9 sha256:4c8c2a8d3eb6b80163506ba514dfa9556610cfc709aba956c9e8e6d934212197 20.97MB / 33.46MB 0.2s
+#9 sha256:4c8c2a8d3eb6b80163506ba514dfa9556610cfc709aba956c9e8e6d934212197 33.46MB / 33.46MB 0.3s done
+#9 extracting sha256:4c8c2a8d3eb6b80163506ba514dfa9556610cfc709aba956c9e8e6d934212197
+#9 extracting sha256:4c8c2a8d3eb6b80163506ba514dfa9556610cfc709aba956c9e8e6d934212197 1.4s done
+#9 sha256:b215dc5268c4d7fc29f0f27fc62d31a3fd7713043239cf0bcc7045127425c6c8 92B / 92B done
+#9 extracting sha256:b215dc5268c4d7fc29f0f27fc62d31a3fd7713043239cf0bcc7045127425c6c8 0.0s done
+#9 CACHED
+#10 [4/9] COPY pyproject.toml ./
+#10 DONE 0.0s
+#11 [5/9] RUN pip install --no-cache-dir uv &&     uv pip install --system -r pyproject.toml
+#11 1.700 Collecting uv
+#11 1.721   Downloading uv-0.8.13-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (11 kB)
+#11 1.728 Downloading uv-0.8.13-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (19.5 MB)
+#11 1.842    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 19.5/19.5 MB 217.9 MB/s eta 0:00:00
+#11 1.891 Installing collected packages: uv
+#11 2.116 Successfully installed uv-0.8.13
+#11 2.116 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#11 2.185 
+#11 2.185 [notice] A new release of pip is available: 24.0 -> 25.2
+#11 2.185 [notice] To update, run: pip install --upgrade pip
+#11 2.348 Using Python 3.11.13 environment at: /usr/local
+#11 2.442   × No solution found when resolving dependencies:
+#11 2.442   ╰─▶ Because only youtube-transcript-api<=1.2.2 is available and
+#11 2.442       repl-nix-workspace depends on youtube-transcript-api>=1.6.0, we can
+#11 2.442       conclude that your requirements are unsatisfiable.
+#11 ERROR: process "/bin/sh -c pip install --no-cache-dir uv &&     uv pip install --system -r pyproject.toml" did not complete successfully: exit code: 1
+------
+ > [5/9] RUN pip install --no-cache-dir uv &&     uv pip install --system -r pyproject.toml:
+2.116 Successfully installed uv-0.8.13
+2.116 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+2.185 
+2.185 [notice] A new release of pip is available: 24.0 -> 25.2
+2.185 [notice] To update, run: pip install --upgrade pip
+2.348 Using Python 3.11.13 environment at: /usr/local
+2.442   × No solution found when resolving dependencies:
+2.442   ╰─▶ Because only youtube-transcript-api<=1.2.2 is available and
+2.442       repl-nix-workspace depends on youtube-transcript-api>=1.6.0, we can
+2.442       conclude that your requirements are unsatisfiable.
+------
+Dockerfile:15
+--------------------
+  14 |     COPY pyproject.toml ./
+  15 | >>> RUN pip install --no-cache-dir uv && \
+  16 | >>>     uv pip install --system -r pyproject.toml
+  17 |     
+--------------------
+error: failed to solve: process "/bin/sh -c pip install --no-cache-dir uv &&     uv pip install --system -r pyproject.toml" did not complete successfully: exit code: 1
+error: exit status 1
