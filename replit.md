@@ -25,12 +25,13 @@ Preferred communication style: Simple, everyday language.
 - **Response Format**: JSON responses with structured data containing transcript timing and text information
 - **Cloud Deployment Testing**: Dedicated `/test` endpoint provides immediate verification of service functionality
 
-### Network Resilience (Updated August 2025)
-- **Multi-Strategy Retry System**: Implements intelligent retry logic with multiple language code attempts to improve success rates
-- **Cloud Platform Optimization**: Specifically designed to work around YouTube's IP blocking of cloud providers (Render, Heroku, etc.)
-- **Error Classification**: Sophisticated error detection that distinguishes between IP blocking, video unavailability, and other issues
-- **Progressive Retry Delays**: Random delays between attempts (2-5 seconds) to avoid rate limiting
-- **Language Fallback**: Attempts multiple English language variants (['en'], ['en-US'], ['en-GB']) across retry attempts
+### Network Resilience (Docker + Tor Solution - August 2025)
+- **Docker Container with Tor**: Complete Tor proxy setup within Docker container for cloud deployment
+- **SOCKS5 Proxy Integration**: Primary strategy uses Tor SOCKS5 proxy (127.0.0.1:9050) to bypass YouTube IP blocking
+- **Multi-Layer Fallback**: Attempts Tor proxy first, then falls back to direct connection with language variations
+- **Tor Connectivity Verification**: Built-in health checks to verify Tor proxy availability and functionality
+- **Cloud Platform Ready**: Specifically designed for Render Docker deployments to solve cloud IP blocking completely
+- **Progressive Retry Logic**: Random delays (2-5 seconds) between attempts with multiple language code fallbacks
 
 ### Logging and Monitoring
 - **Debug Logging**: Comprehensive logging system for tracking API requests, proxy attempts, and error conditions
@@ -41,9 +42,12 @@ Preferred communication style: Simple, everyday language.
 - **Input Validation**: Basic validation of video ID parameters to prevent empty or malformed requests
 
 ### Deployment Architecture
-- **Cloud Deployment**: Configured for deployment on cloud platforms (currently running on Render)
-- **Port Configuration**: Flexible port binding (default 10000) for cloud platform requirements
-- **Process Management**: Uses Gunicorn worker processes for handling concurrent requests
+- **Docker Container**: Containerized deployment with Ubuntu base image for full system control
+- **Tor Integration**: Automatic Tor installation and configuration within container
+- **Cloud Deployment**: Optimized for Render Docker environment with proper orchestration
+- **Port Configuration**: Flexible port binding (default 10000) with environment variable support
+- **Process Management**: Container startup script manages Tor initialization followed by Gunicorn server
+- **Health Monitoring**: Built-in Tor connectivity checks and service health verification
 
 ## External Dependencies
 

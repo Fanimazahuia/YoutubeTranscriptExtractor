@@ -28,7 +28,7 @@ USER_AGENTS = [
 
 def get_transcript_with_retry(video_id, max_retries=3):
     """
-    Fetch transcript with retry logic and multiple strategies to work around IP blocking.
+    Fetch transcript with retry logic using Tor proxy and fallback strategies.
     
     Args:
         video_id (str): YouTube video ID
@@ -46,7 +46,22 @@ def get_transcript_with_retry(video_id, max_retries=3):
         try:
             app.logger.debug(f"Attempt {attempt + 1}: Fetching transcript for video ID: {video_id}")
             
-            # Strategy 1: Try with different language codes to increase success rate
+            # Strategy 1: Try with Tor proxy first (should work in Docker)
+            if attempt == 0:
+                try:
+                    proxies = {
+                        'http': 'socks5h://127.0.0.1:9050',
+                        'https': 'socks5h://127.0.0.1:9050'
+                    }
+                    app.logger.debug("Attempting to use Tor SOCKS5 proxy: 127.0.0.1:9050")
+                    transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+                    app.logger.debug(f"Successfully retrieved transcript via Tor proxy on attempt {attempt + 1}")
+                    return transcript_list
+                except Exception as proxy_error:
+                    app.logger.warning(f"Tor proxy failed on attempt {attempt + 1}: {str(proxy_error)}")
+                    last_error = proxy_error
+            
+            # Strategy 2: Direct connection with language variations
             language_combinations = [
                 ['en'],
                 ['en-US'],
@@ -55,13 +70,11 @@ def get_transcript_with_retry(video_id, max_retries=3):
                 ['en', 'en-GB', 'en-US']
             ]
             
-            # Try with the current language combination
             languages = language_combinations[attempt % len(language_combinations)]
+            app.logger.debug(f"Trying direct connection with languages: {languages}")
             
-            # Simple API call with language preference
             transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
-            
-            app.logger.debug(f"Successfully retrieved transcript on attempt {attempt + 1} with languages: {languages}")
+            app.logger.debug(f"Successfully retrieved transcript via direct connection on attempt {attempt + 1}")
             return transcript_list
             
         except Exception as e:
@@ -276,6 +289,29 @@ def health_check():
         'message': 'YouTube Transcript API is running'
     }), 200
 
+def check_tor_connectivity():
+    """
+    Check if Tor is running and accessible.
+    
+    Returns:
+        dict: Tor connectivity status
+    """
+    try:
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        result = sock.connect_ex(('127.0.0.1', 9050))
+        sock.close()
+        return {
+            'tor_available': result == 0,
+            'message': 'Tor proxy is running' if result == 0 else 'Tor proxy not available'
+        }
+    except Exception as e:
+        return {
+            'tor_available': False,
+            'message': f'Error checking Tor: {str(e)}'
+        }
+
 @app.route('/test', methods=['GET'])
 def test_endpoint():
     """
@@ -286,6 +322,9 @@ def test_endpoint():
     """
     # Using a popular video that usually has transcripts available
     test_video_id = "iCQ4SgVHENg"  # A short, popular video with reliable transcripts
+    
+    # Check Tor connectivity first
+    tor_status = check_tor_connectivity()
     
     try:
         transcript_list = get_transcript_with_retry(test_video_id, max_retries=2)
@@ -298,7 +337,8 @@ def test_endpoint():
             'message': 'YouTube Transcript API is working correctly',
             'test_video_id': test_video_id,
             'sample_transcript': sample_transcript,
-            'total_entries': len(transcript_list)
+            'total_entries': len(transcript_list),
+            'tor_status': tor_status
         }), 200
         
     except Exception as e:
@@ -309,18 +349,20 @@ def test_endpoint():
                 'status': 'ip_blocked',
                 'message': 'YouTube is blocking requests from this cloud server IP',
                 'error': error_message,
+                'tor_status': tor_status,
                 'suggestions': [
                     'This is common with cloud hosting platforms like Render, Heroku, etc.',
-                    'The API may work intermittently',
-                    'Try deploying to a different region or hosting provider',
-                    'Consider using a proxy service or VPN solution'
+                    'Docker deployment with Tor should resolve this issue',
+                    'Make sure to set Render to use Docker language/environment',
+                    'Try deploying to a different region or hosting provider'
                 ]
             }), 503
         else:
             return jsonify({
                 'status': 'error',
                 'message': 'Failed to fetch test transcript',
-                'error': error_message
+                'error': error_message,
+                'tor_status': tor_status
             }), 500
 
 @app.route('/', methods=['GET'])
