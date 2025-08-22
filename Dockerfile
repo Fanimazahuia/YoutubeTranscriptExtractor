@@ -5,7 +5,11 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y \
     tor \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    sudo \
+    net-tools \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /var/run/tor \
+    && chown -R debian-tor:debian-tor /var/run/tor
 
 # Set working directory
 WORKDIR /app
@@ -23,47 +27,50 @@ RUN python3 -c "from youtube_transcript_api import YouTubeTranscriptApi; print('
 COPY . .
 
 # Create Tor configuration
-RUN echo "SocksPort 0.0.0.0:9050" > /etc/tor/torrc && \
-    echo "ControlPort 0.0.0.0:9051" >> /etc/tor/torrc && \
+RUN echo "SocksPort 9050" > /etc/tor/torrc && \
+    echo "ControlPort 9051" >> /etc/tor/torrc && \
     echo "DataDirectory /var/lib/tor" >> /etc/tor/torrc && \
-    echo "Log notice stdout" >> /etc/tor/torrc && \
+    echo "Log notice stderr" >> /etc/tor/torrc && \
     echo "ExitPolicy reject *:*" >> /etc/tor/torrc && \
-    echo "StrictNodes 1" >> /etc/tor/torrc
+    echo "StrictNodes 0" >> /etc/tor/torrc && \
+    echo "DisableNetwork 0" >> /etc/tor/torrc && \
+    chown -R debian-tor:debian-tor /var/lib/tor
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
 # Debug Python and API versions\n\
 echo "=== Environment Debug ==="\n\
 python3 --version\n\
 python3 -c "import youtube_transcript_api; print(f\"YouTube Transcript API version: {youtube_transcript_api.__version__}\")" || echo "Could not get version"\n\
-python3 -c "from youtube_transcript_api import YouTubeTranscriptApi; print(\"Available methods:\", [m for m in dir(YouTubeTranscriptApi) if not m.startswith(\"_\")])"\n\
 echo "========================"\n\
 \n\
-# Start Tor in background\n\
-echo "Starting Tor proxy..."\n\
-tor &\n\
+# Ensure Tor directories have correct permissions\n\
+chown -R debian-tor:debian-tor /var/lib/tor\n\
+chmod 700 /var/lib/tor\n\
 \n\
-# Wait for Tor to start\n\
-echo "Waiting for Tor to start..."\n\
-sleep 15\n\
+# Start Tor as daemon\n\
+echo "Starting Tor proxy as debian-tor user..."\n\
+sudo -u debian-tor tor --RunAsDaemon 1 --pidfile /var/run/tor/tor.pid\n\
 \n\
-# Check if Tor is running\n\
-echo "Testing Tor connectivity..."\n\
-if timeout 10 curl --socks5-hostname 127.0.0.1:9050 http://check.torproject.org/ 2>/dev/null | grep -q "Congratulations"; then\n\
-    echo "✅ Tor is running successfully"\n\
-else\n\
-    echo "⚠️  Tor startup verification failed, but continuing..."\n\
-    # Check if Tor process is at least running\n\
-    if pgrep tor > /dev/null; then\n\
-        echo "Tor process is running on PID: $(pgrep tor)"\n\
-    else\n\
-        echo "Tor process not found"\n\
+# Wait for Tor to start and create SOCKS port\n\
+echo "Waiting for Tor to initialize..."\n\
+for i in {1..30}; do\n\
+    if netstat -ln | grep -q ":9050"; then\n\
+        echo "✅ Tor SOCKS proxy is listening on port 9050"\n\
+        break\n\
     fi\n\
-fi\n\
+    echo "Waiting for Tor to bind to port 9050... ($i/30)"\n\
+    sleep 2\n\
+done\n\
 \n\
-# Test YouTube API functionality\n\
-echo "Testing YouTube Transcript API..."\n\
-python3 -c "from youtube_transcript_api import YouTubeTranscriptApi; t = YouTubeTranscriptApi.list_transcripts(\"iCQ4SgVHENg\").find_transcript([\"en\"]).fetch(); print(f\"✅ API test successful, got {len(t)} entries\")" || echo "⚠️  API test failed"\n\
+# Final verification\n\
+if netstat -ln | grep -q ":9050"; then\n\
+    echo "✅ Tor startup successful - proxy available on 127.0.0.1:9050"\n\
+else\n\
+    echo "⚠️  Tor may not be ready, but continuing..."\n\
+fi\n\
 \n\
 echo "Starting Flask application..."\n\
 # Start the Flask application\n\
