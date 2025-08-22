@@ -1,0 +1,37 @@
+Running 'python main.py'
+     ==> Deploying...
+==> Running 'gunicorn app:app'
+[2025-08-21 17:05:49 +0000] [66] [INFO] Starting gunicorn 23.0.0
+[2025-08-21 17:05:49 +0000] [66] [INFO] Listening at: http://0.0.0.0:10000 (66)
+[2025-08-21 17:05:49 +0000] [66] [INFO] Using worker: sync
+[2025-08-21 17:05:49 +0000] [67] [INFO] Booting worker with pid: 67
+127.0.0.1 - - [21/Aug/2025:17:05:49 +0000] "HEAD / HTTP/1.1" 200 0 "-" "Go-http-client/1.1"
+     ==> Your service is live 🎉
+     ==> 
+     ==> ///////////////////////////////////////////////////////////
+     ==> 
+     ==> Available at your primary URL https://youtubetranscriptextractor-1.onrender.com
+     ==> 
+     ==> ///////////////////////////////////////////////////////////
+127.0.0.1 - - [21/Aug/2025:17:06:01 +0000] "GET / HTTP/1.1" 200 627 "-" "Go-http-client/2.0"
+     ==> Detected service running on port 10000
+     ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+- You are doing requests from an IP belonging to a cloud provider (like AWS, Google Cloud Platform, Azure, etc.). Unfortunately, most IPs from cloud providers are blocked by YouTube.
+There are two things you can do to work around this:
+1. Use proxies to hide your IP address, as explained in the "Working around IP bans" section of the README (https://github.com/jdepoix/youtube-transcript-api?tab=readme-ov-file#working-around-ip-bans-requestblocked-or-ipblocked-exception).
+2. (NOT RECOMMENDED) If you authenticate your requests using cookies, you will be able to continue doing requests for a while. However, YouTube will eventually permanently ban the account that you have used to authenticate with! So only do this if you don't mind your account being banned!
+If you are sure that the described cause is not responsible for this error and that a transcript should be retrievable, please create an issue at https://github.com/jdepoix/youtube-transcript-api/issues. Please add which version of youtube_transcript_api you are using and provide the information needed to replicate the error. Also make sure that there are no open issues which already describe your problem!
+127.0.0.1 - - [21/Aug/2025:17:21:29 +0000] "GET /transcript?videoId=dQw4w9WgXcQ HTTP/1.1" 500 105 "-" "curl/8.14.1"
+DEBUG:app:Fetching transcript for video ID: i8wOgft0AYQ
+DEBUG:app:Attempting to use Tor SOCKS5 proxy: 127.0.0.1:9050
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): www.youtube.com:443
+DEBUG:socks:Error connecting to SOCKS5 proxy 127.0.0.1:9050 due to: [Errno 111] Connection refused
+WARNING:app:Tor proxy failed, falling back to direct connection: SOCKSHTTPSConnectionPool(host='www.youtube.com', port=443): Max retries exceeded with url: /watch?v=i8wOgft0AYQ (Caused by NewConnectionError('<urllib3.contrib.socks.SOCKSHTTPSConnection object at 0x7d34b3c91a90>: Failed to establish a new connection: [Errno 111] Connection refused'))
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): www.youtube.com:443
+DEBUG:urllib3.connectionpool:https://www.youtube.com:443 "GET /watch?v=i8wOgft0AYQ HTTP/1.1" 200 None
+DEBUG:urllib3.connectionpool:https://www.youtube.com:443 "POST /youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8 HTTP/1.1" 200 None
+ERROR:app:Unexpected error fetching transcript for video ID i8wOgft0AYQ: 
+Could not retrieve a transcript for the video https://www.youtube.com/watch?v=i8wOgft0AYQ! This is most likely caused by:
+YouTube is blocking requests from your IP. This usually is due to one of the following reasons:
+- You have done too many requests and your IP has been blocked by YouTube
+- You are doing requests from an IP belonging to a cloud provider (like AWS, Google Cloud Platform, Azure, etc.). Unfortunately, most IPs from cloud providers are blocked by YouTube.

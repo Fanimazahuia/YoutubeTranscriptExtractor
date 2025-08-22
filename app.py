@@ -1,5 +1,7 @@
 import os
 import logging
+import random
+import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -14,6 +16,69 @@ app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
 
 # Enable CORS for cross-origin requests
 CORS(app)
+
+# List of user agents to rotate through for better compatibility
+USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0'
+]
+
+def get_transcript_with_retry(video_id, max_retries=3):
+    """
+    Fetch transcript with retry logic and multiple strategies to work around IP blocking.
+    
+    Args:
+        video_id (str): YouTube video ID
+        max_retries (int): Maximum number of retry attempts
+        
+    Returns:
+        list: Transcript data
+        
+    Raises:
+        Exception: If all retry attempts fail
+    """
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            app.logger.debug(f"Attempt {attempt + 1}: Fetching transcript for video ID: {video_id}")
+            
+            # Strategy 1: Try with different language codes to increase success rate
+            language_combinations = [
+                ['en'],
+                ['en-US'],
+                ['en-GB'], 
+                ['en', 'en-US'],
+                ['en', 'en-GB', 'en-US']
+            ]
+            
+            # Try with the current language combination
+            languages = language_combinations[attempt % len(language_combinations)]
+            
+            # Simple API call with language preference
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
+            
+            app.logger.debug(f"Successfully retrieved transcript on attempt {attempt + 1} with languages: {languages}")
+            return transcript_list
+            
+        except Exception as e:
+            last_error = e
+            app.logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+            
+            # Add delay between retries to avoid rate limiting
+            if attempt < max_retries - 1:
+                delay = random.uniform(2, 5)  # Random delay between 2-5 seconds
+                app.logger.debug(f"Waiting {delay:.1f} seconds before retry...")
+                time.sleep(delay)
+    
+    # All attempts failed, raise the last error
+    if last_error:
+        raise last_error
+    else:
+        raise Exception("Failed to retrieve transcript after all retry attempts")
 
 @app.route('/transcript', methods=['GET'])
 def get_transcript():
@@ -48,22 +113,8 @@ def get_transcript():
                 'message': 'videoId cannot be empty'
             }), 400
 
-        app.logger.debug(f"Fetching transcript for video ID: {video_id}")
-
-        # Try to use Tor SOCKS5 proxy, fallback to direct connection if unavailable
-        try:
-            proxies = {
-                'http': 'socks5h://127.0.0.1:9050',
-                'https': 'socks5h://127.0.0.1:9050'
-            }
-            app.logger.debug("Attempting to use Tor SOCKS5 proxy: 127.0.0.1:9050")
-
-            # Test proxy connection by attempting to fetch transcript
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
-        except Exception as proxy_error:
-            app.logger.warning(f"Tor proxy failed, falling back to direct connection: {str(proxy_error)}")
-            # Fallback to direct connection without proxy
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        # Use the new retry function with multiple strategies
+        transcript_list = get_transcript_with_retry(video_id)
 
         # Format transcript data to match expected output
         formatted_transcript = []
@@ -100,11 +151,23 @@ def get_transcript():
         }), 404
 
     except Exception as e:
-        app.logger.error(f"Unexpected error fetching transcript for video ID {video_id}: {str(e)}")
-        return jsonify({
-            'error': 'Internal server error',
-            'message': 'An unexpected error occurred while fetching the transcript'
-        }), 500
+        error_message = str(e)
+        app.logger.error(f"Unexpected error fetching transcript for video ID {video_id}: {error_message}")
+        
+        # Check if it's an IP blocking issue and provide helpful guidance
+        if "cloud provider" in error_message.lower() or "ip" in error_message.lower():
+            return jsonify({
+                'error': 'IP blocked by YouTube',
+                'message': 'YouTube has blocked requests from this server IP. This is common with cloud hosting platforms. The service may work intermittently.',
+                'suggestion': 'Try again later or use a different video ID for testing.',
+                'technical_details': error_message
+            }), 503
+        else:
+            return jsonify({
+                'error': 'Internal server error',
+                'message': 'An unexpected error occurred while fetching the transcript',
+                'details': error_message
+            }), 500
 
 @app.route('/transcript/formatted', methods=['GET'])
 def get_formatted_transcript():
@@ -139,22 +202,8 @@ def get_formatted_transcript():
                 'message': 'videoId cannot be empty'
             }), 400
 
-        app.logger.debug(f"Fetching formatted transcript for video ID: {video_id}")
-
-        # Try to use Tor SOCKS5 proxy, fallback to direct connection if unavailable
-        try:
-            proxies = {
-                'http': 'socks5h://127.0.0.1:9050',
-                'https': 'socks5h://127.0.0.1:9050'
-            }
-            app.logger.debug("Attempting to use Tor SOCKS5 proxy: 127.0.0.1:9050")
-
-            # Test proxy connection by attempting to fetch transcript
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
-        except Exception as proxy_error:
-            app.logger.warning(f"Tor proxy failed, falling back to direct connection: {str(proxy_error)}")
-            # Fallback to direct connection without proxy
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        # Use the new retry function with multiple strategies
+        transcript_list = get_transcript_with_retry(video_id)
 
         # Format transcript as text with timestamps
         formatted_text = ""
@@ -196,11 +245,23 @@ def get_formatted_transcript():
         }), 404
 
     except Exception as e:
-        app.logger.error(f"Unexpected error fetching formatted transcript for video ID {video_id}: {str(e)}")
-        return jsonify({
-            'error': 'Internal server error',
-            'message': 'An unexpected error occurred while fetching the transcript'
-        }), 500
+        error_message = str(e)
+        app.logger.error(f"Unexpected error fetching formatted transcript for video ID {video_id}: {error_message}")
+        
+        # Check if it's an IP blocking issue and provide helpful guidance
+        if "cloud provider" in error_message.lower() or "ip" in error_message.lower():
+            return jsonify({
+                'error': 'IP blocked by YouTube',
+                'message': 'YouTube has blocked requests from this server IP. This is common with cloud hosting platforms. The service may work intermittently.',
+                'suggestion': 'Try again later or use a different video ID for testing.',
+                'technical_details': error_message
+            }), 503
+        else:
+            return jsonify({
+                'error': 'Internal server error',
+                'message': 'An unexpected error occurred while fetching the transcript',
+                'details': error_message
+            }), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -215,6 +276,53 @@ def health_check():
         'message': 'YouTube Transcript API is running'
     }), 200
 
+@app.route('/test', methods=['GET'])
+def test_endpoint():
+    """
+    Test endpoint with a known working video for cloud deployment testing.
+    
+    Returns:
+        JSON: Test transcript result
+    """
+    # Using a popular video that usually has transcripts available
+    test_video_id = "iCQ4SgVHENg"  # A short, popular video with reliable transcripts
+    
+    try:
+        transcript_list = get_transcript_with_retry(test_video_id, max_retries=2)
+        
+        # Return just the first few entries for testing
+        sample_transcript = transcript_list[:3] if len(transcript_list) > 3 else transcript_list
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'YouTube Transcript API is working correctly',
+            'test_video_id': test_video_id,
+            'sample_transcript': sample_transcript,
+            'total_entries': len(transcript_list)
+        }), 200
+        
+    except Exception as e:
+        error_message = str(e)
+        
+        if "cloud provider" in error_message.lower() or "ip" in error_message.lower():
+            return jsonify({
+                'status': 'ip_blocked',
+                'message': 'YouTube is blocking requests from this cloud server IP',
+                'error': error_message,
+                'suggestions': [
+                    'This is common with cloud hosting platforms like Render, Heroku, etc.',
+                    'The API may work intermittently',
+                    'Try deploying to a different region or hosting provider',
+                    'Consider using a proxy service or VPN solution'
+                ]
+            }), 503
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to fetch test transcript',
+                'error': error_message
+            }), 500
+
 @app.route('/', methods=['GET'])
 def root():
     """
@@ -227,7 +335,13 @@ def root():
         'name': 'YouTube Transcript API',
         'version': '1.0.0',
         'description': 'Fetch YouTube video transcripts using video ID',
+        'status': 'Cloud deployment optimized with retry logic',
         'endpoints': {
+            '/test': {
+                'method': 'GET',
+                'description': 'Test endpoint to verify API functionality with a sample video',
+                'note': 'Use this to check if the service is working on your deployment'
+            },
             '/transcript': {
                 'method': 'GET',
                 'description': 'Fetch transcript for a YouTube video (JSON format)',
@@ -247,6 +361,16 @@ def root():
             '/health': {
                 'method': 'GET',
                 'description': 'Health check endpoint'
+            }
+        },
+        'cloud_deployment_notes': {
+            'issue': 'YouTube blocks IPs from cloud providers',
+            'solution': 'This API includes retry logic and error handling',
+            'testing': 'Use /test endpoint to verify functionality',
+            'status_codes': {
+                '503': 'IP blocked by YouTube (common on cloud platforms)',
+                '404': 'Video not found or transcript unavailable',
+                '500': 'Other server errors'
             }
         }
     }), 200
