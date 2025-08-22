@@ -12,8 +12,8 @@ WORKDIR /app
 
 # Copy requirements and install Python dependencies
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir uv && \
-    uv pip install --system -r pyproject.toml
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -e .
 
 # Verify installation and debug
 RUN python3 -c "from youtube_transcript_api import YouTubeTranscriptApi; print('YouTube API imported successfully')" && \
