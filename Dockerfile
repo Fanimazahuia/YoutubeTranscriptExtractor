@@ -15,6 +15,10 @@ COPY pyproject.toml ./
 RUN pip install --no-cache-dir uv && \
     uv pip install --system -r pyproject.toml
 
+# Verify installation and debug
+RUN python3 -c "from youtube_transcript_api import YouTubeTranscriptApi; print('YouTube API imported successfully')" && \
+    python3 -c "print('Available methods:', [m for m in dir(__import__('youtube_transcript_api').YouTubeTranscriptApi) if not m.startswith('_')])"
+
 # Copy application code
 COPY . .
 
@@ -28,22 +32,42 @@ RUN echo "SocksPort 0.0.0.0:9050" > /etc/tor/torrc && \
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
+# Debug Python and API versions\n\
+echo "=== Environment Debug ==="\n\
+python3 --version\n\
+python3 -c "import youtube_transcript_api; print(f\"YouTube Transcript API version: {youtube_transcript_api.__version__}\")" || echo "Could not get version"\n\
+python3 -c "from youtube_transcript_api import YouTubeTranscriptApi; print(\"Available methods:\", [m for m in dir(YouTubeTranscriptApi) if not m.startswith(\"_\")])"\n\
+echo "========================"\n\
+\n\
 # Start Tor in background\n\
+echo "Starting Tor proxy..."\n\
 tor &\n\
 \n\
 # Wait for Tor to start\n\
 echo "Waiting for Tor to start..."\n\
-sleep 10\n\
+sleep 15\n\
 \n\
 # Check if Tor is running\n\
-if curl --socks5-hostname 127.0.0.1:9050 http://check.torproject.org/ | grep -q "Congratulations"; then\n\
-    echo "Tor is running successfully"\n\
+echo "Testing Tor connectivity..."\n\
+if timeout 10 curl --socks5-hostname 127.0.0.1:9050 http://check.torproject.org/ 2>/dev/null | grep -q "Congratulations"; then\n\
+    echo "✅ Tor is running successfully"\n\
 else\n\
-    echo "Tor startup verification failed, but continuing..."\n\
+    echo "⚠️  Tor startup verification failed, but continuing..."\n\
+    # Check if Tor process is at least running\n\
+    if pgrep tor > /dev/null; then\n\
+        echo "Tor process is running on PID: $(pgrep tor)"\n\
+    else\n\
+        echo "Tor process not found"\n\
+    fi\n\
 fi\n\
 \n\
+# Test YouTube API functionality\n\
+echo "Testing YouTube Transcript API..."\n\
+python3 -c "from youtube_transcript_api import YouTubeTranscriptApi; t = YouTubeTranscriptApi.list_transcripts(\"iCQ4SgVHENg\").find_transcript([\"en\"]).fetch(); print(f\"✅ API test successful, got {len(t)} entries\")" || echo "⚠️  API test failed"\n\
+\n\
+echo "Starting Flask application..."\n\
 # Start the Flask application\n\
-exec gunicorn --bind 0.0.0.0:${PORT:-10000} --workers 1 --timeout 120 main:app\n\
+exec gunicorn --bind 0.0.0.0:${PORT:-10000} --workers 1 --timeout 120 --log-level debug main:app\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 # Expose the port

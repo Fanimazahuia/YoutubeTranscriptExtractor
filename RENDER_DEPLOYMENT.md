@@ -8,6 +8,8 @@ This API now uses Docker to run Tor proxy on Render, which solves YouTube's clou
 
 ✅ **Docker container with Tor** - Full Tor installation and automatic startup  
 ✅ **Tor proxy integration** - Uses SOCKS5 proxy to bypass IP blocks  
+✅ **API compatibility layer** - Works with both modern and legacy YouTube Transcript API versions  
+✅ **Enhanced debugging** - Comprehensive logging and version detection in container  
 ✅ **Fallback strategies** - Multiple retry attempts with different methods  
 ✅ **Enhanced testing** - Tor connectivity verification in test endpoint  
 ✅ **Production ready** - Proper container orchestration and health checks  

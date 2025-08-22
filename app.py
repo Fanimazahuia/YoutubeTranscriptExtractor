@@ -28,7 +28,7 @@ USER_AGENTS = [
 
 def get_transcript_with_retry(video_id, max_retries=3):
     """
-    Fetch transcript with retry logic using Tor proxy and fallback strategies.
+    Fetch transcript with compatibility for different API versions and Tor proxy.
     
     Args:
         video_id (str): YouTube video ID
@@ -54,14 +54,26 @@ def get_transcript_with_retry(video_id, max_retries=3):
                         'https': 'socks5h://127.0.0.1:9050'
                     }
                     app.logger.debug("Attempting to use Tor SOCKS5 proxy: 127.0.0.1:9050")
-                    transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
-                    app.logger.debug(f"Successfully retrieved transcript via Tor proxy on attempt {attempt + 1}")
-                    return transcript_list
+                    
+                    # Try modern API first, then fallback to older method
+                    try:
+                        transcript_list_obj = YouTubeTranscriptApi.list_transcripts(video_id, proxies=proxies)
+                        transcript = transcript_list_obj.find_transcript(['en', 'en-US', 'en-GB'])
+                        transcript_data = transcript.fetch()
+                        app.logger.debug(f"Successfully retrieved transcript via Tor proxy (modern API) on attempt {attempt + 1}")
+                        return transcript_data
+                    except AttributeError:
+                        # Fallback to older API method
+                        app.logger.debug("Modern API not available, trying legacy get_transcript method")
+                        transcript_data = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+                        app.logger.debug(f"Successfully retrieved transcript via Tor proxy (legacy API) on attempt {attempt + 1}")
+                        return transcript_data
+                        
                 except Exception as proxy_error:
                     app.logger.warning(f"Tor proxy failed on attempt {attempt + 1}: {str(proxy_error)}")
                     last_error = proxy_error
             
-            # Strategy 2: Direct connection with language variations
+            # Strategy 2: Direct connection with API compatibility
             language_combinations = [
                 ['en'],
                 ['en-US'],
@@ -73,9 +85,19 @@ def get_transcript_with_retry(video_id, max_retries=3):
             languages = language_combinations[attempt % len(language_combinations)]
             app.logger.debug(f"Trying direct connection with languages: {languages}")
             
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
-            app.logger.debug(f"Successfully retrieved transcript via direct connection on attempt {attempt + 1}")
-            return transcript_list
+            # Try modern API first, then fallback to older method
+            try:
+                transcript_list_obj = YouTubeTranscriptApi.list_transcripts(video_id)
+                transcript = transcript_list_obj.find_transcript(languages)
+                transcript_data = transcript.fetch()
+                app.logger.debug(f"Successfully retrieved transcript via direct connection (modern API) on attempt {attempt + 1}")
+                return transcript_data
+            except AttributeError:
+                # Fallback to older API method
+                app.logger.debug("Modern API not available, trying legacy get_transcript method")
+                transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
+                app.logger.debug(f"Successfully retrieved transcript via direct connection (legacy API) on attempt {attempt + 1}")
+                return transcript_data
             
         except Exception as e:
             last_error = e
